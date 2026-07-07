@@ -1,0 +1,16 @@
+docs/source/_static/ filter=lfs diff=lfs merge=lfs -text
+docs/source/_static/full_matrxi.afdesign filter=lfs diff=lfs merge=lfs -text
+docs/source/_static/imputed_matrix.png filter=lfs diff=lfs merge=lfs -text
+docs/source/_static/uncombined_drugs.afdesign filter=lfs diff=lfs merge=lfs -text
+docs/source/_static/1_zip.png filter=lfs diff=lfs merge=lfs -text
+docs/source/_static/minimal_matrix.afdesign filter=lfs diff=lfs merge=lfs -text
+docs/source/_static/minimal_matrix.png filter=lfs diff=lfs merge=lfs -text
+docs/source/_static/imputed_matrix.afdesign filter=lfs diff=lfs merge=lfs -text
+docs/source/_static/uncombined_drugs.png filter=lfs diff=lfs merge=lfs -text
+docs/source/_static/unexpected_addition.afdesign filter=lfs diff=lfs merge=lfs -text
+docs/source/_static/unexpected_addition.png filter=lfs diff=lfs merge=lfs -text
+docs/source/_static/1_vs-og.png filter=lfs diff=lfs merge=lfs -text
+docs/source/_static/2_vs-og.png filter=lfs diff=lfs merge=lfs -text
+docs/source/_static/2_zip.png filter=lfs diff=lfs merge=lfs -text
+docs/source/_static/full_matrix.afdesign filter=lfs diff=lfs merge=lfs -text
+docs/source/_static/full_matrix.png filter=lfs diff=lfs merge=lfs -text
