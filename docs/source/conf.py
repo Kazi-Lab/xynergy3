@@ -47,6 +47,7 @@ html_static_path = ["_static"]
 html_title = f"{APP_NAME} {__version__}"
 html_theme_options = {
     "logo": {"text": APP_NAME},
+    "back_to_top_button": False,
 }
 html_context = {
     "app_tagline": APP_TAGLINE,
