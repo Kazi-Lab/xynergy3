@@ -35,8 +35,8 @@ def _iterative_svd_complete(
     Parameters
     ----------
     observed : np.ndarray
-        Matrix with known values in observed positions, denoted by mask (other positions are
-        ignored).
+        Matrix with known values in observed positions, denoted by mask (other
+        positions are ignored).
     mask : np.ndarray
         Binary array of the same shape: 1.0 for observed, 0.0 for missing.
     rank : int
@@ -112,7 +112,9 @@ def _rbf_surface_complete(
                     (
                         pl.col(single_resp_cols[0])
                         + pl.col(single_resp_cols[1])
-                        - pl.col(single_resp_cols[0]) * pl.col(single_resp_cols[1]) / 100
+                        - pl.col(single_resp_cols[0])
+                        * pl.col(single_resp_cols[1])
+                        / 100
                     ).alias("_rbf_reference")
                 )
             else:
@@ -144,14 +146,18 @@ def _rbf_surface_complete(
 
         if len(obs_coords) >= 3:
             rbf = RBFInterpolator(
-                obs_coords, obs_resids,
-                kernel=rbf_kernel, smoothing=rbf_smoothing,
+                obs_coords,
+                obs_resids,
+                kernel=rbf_kernel,
+                smoothing=rbf_smoothing,
             )
             # Predict for all rows
-            all_coords = np.array([
-                [np.log10(da_list[k] + 1e-10), np.log10(db_list[k] + 1e-10)]
-                for k in range(n_rows)
-            ])
+            all_coords = np.array(
+                [
+                    [np.log10(da_list[k] + 1e-10), np.log10(db_list[k] + 1e-10)]
+                    for k in range(n_rows)
+                ]
+            )
             pred_resids = rbf(all_coords)
             imputed_vals = np.array(ref_list) + pred_resids
         else:
@@ -169,9 +175,7 @@ def _rbf_surface_complete(
                 pl.col("response_imputed_from_effect").alias("resp_imputed")
             )
         else:
-            group = group.with_columns(
-                pl.Series("resp_imputed", imputed_vals)
-            )
+            group = group.with_columns(pl.Series("resp_imputed", imputed_vals))
 
         group = group.drop("_rbf_reference")
         imputed_list.append(group)
@@ -224,11 +228,9 @@ def _gaussian_process_surface_complete(
                 pred_target = np.full(group.height, unique_target[0], dtype=float)
             else:
                 coord_scale = np.maximum(np.std(unique_coords, axis=0), 1e-2)
-                kernel = (
-                    ConstantKernel(1.0, (1e-3, 1e3))
-                    * RBF(length_scale=coord_scale, length_scale_bounds=(1e-2, 1e2))
-                    + WhiteKernel(noise_level=1e-3, noise_level_bounds=(1e-8, 1e1))
-                )
+                kernel = ConstantKernel(1.0, (1e-3, 1e3)) * RBF(
+                    length_scale=coord_scale, length_scale_bounds=(1e-2, 1e2)
+                ) + WhiteKernel(noise_level=1e-3, noise_level_bounds=(1e-8, 1e1))
                 gp = GaussianProcessRegressor(
                     kernel=kernel,
                     alpha=1e-6,
@@ -239,7 +241,9 @@ def _gaussian_process_surface_complete(
                     gp.fit(unique_coords, unique_target)
                     pred_target = gp.predict(all_coords)
                 except Exception:
-                    pred_target = np.full(group.height, unique_target.mean(), dtype=float)
+                    pred_target = np.full(
+                        group.height, unique_target.mean(), dtype=float
+                    )
 
             pred_target[observed_mask] = target_vals[observed_mask]
 
@@ -248,9 +252,7 @@ def _gaussian_process_surface_complete(
             group = group.with_columns(
                 pl.Series("combo_effect_imputed", pred_target),
                 pl.Series("response_imputed_from_effect", reference + pred_target),
-            ).with_columns(
-                pl.col("response_imputed_from_effect").alias("resp_imputed")
-            )
+            ).with_columns(pl.col("response_imputed_from_effect").alias("resp_imputed"))
         else:
             group = group.with_columns(pl.Series("resp_imputed", pred_target))
 
@@ -389,7 +391,9 @@ def pre_impute(
         raise ValueError("Length of response_col must be exactly 1")
 
     if target not in ["response", "combo_effect", "ensemble"]:
-        raise ValueError("`target` must be one of ['response', 'combo_effect', 'ensemble']")
+        raise ValueError(
+            "`target` must be one of ['response', 'combo_effect', 'ensemble']"
+        )
 
     if reference_for_target not in ["bliss", "hsa"]:
         raise ValueError("`reference_for_target` must be one of ['bliss', 'hsa']")
@@ -428,26 +432,40 @@ def pre_impute(
             **common_args,
         )
 
-        combo_select = [row_id_col, "resp_imputed", "combo_effect_imputed", "response_imputed_from_effect"]
+        combo_select = [
+            row_id_col,
+            "resp_imputed",
+            "combo_effect_imputed",
+            "response_imputed_from_effect",
+        ]
         for col in [dose_cols[0] + "_resp", dose_cols[1] + "_resp"]:
             if col in combo_out.columns and col not in response_out.columns:
                 combo_select.append(col)
 
-        out = response_out.join(
-            combo_out.select(combo_select).rename({"resp_imputed": "resp_imputed_combo_effect"}),
-            on=row_id_col,
-            how="left",
-        ).with_columns(
-            pl.lit(ensemble_response_weight).alias("ensemble_response_weight"),
-            pl.lit(1.0 - ensemble_response_weight).alias("ensemble_combo_effect_weight"),
-        ).with_columns(
-            (
-                pl.col("ensemble_response_weight") * pl.col("resp_imputed_response")
-                + pl.col("ensemble_combo_effect_weight") * pl.col("resp_imputed_combo_effect")
-            ).alias("resp_imputed_ensemble")
-        ).with_columns(
-            pl.col("resp_imputed_ensemble").alias("resp_imputed")
-        ).drop(row_id_col)
+        out = (
+            response_out.join(
+                combo_out.select(combo_select).rename(
+                    {"resp_imputed": "resp_imputed_combo_effect"}
+                ),
+                on=row_id_col,
+                how="left",
+            )
+            .with_columns(
+                pl.lit(ensemble_response_weight).alias("ensemble_response_weight"),
+                pl.lit(1.0 - ensemble_response_weight).alias(
+                    "ensemble_combo_effect_weight"
+                ),
+            )
+            .with_columns(
+                (
+                    pl.col("ensemble_response_weight") * pl.col("resp_imputed_response")
+                    + pl.col("ensemble_combo_effect_weight")
+                    * pl.col("resp_imputed_combo_effect")
+                ).alias("resp_imputed_ensemble")
+            )
+            .with_columns(pl.col("resp_imputed_ensemble").alias("resp_imputed"))
+            .drop(row_id_col)
+        )
 
         if clip_response_bounds is not None:
             low, high = clip_response_bounds
@@ -465,7 +483,9 @@ def pre_impute(
         df_og, experiment_cols
     )
 
-    required_cols = experiment_cols + additional_imputation_cols + dose_cols + [response_col]
+    required_cols = (
+        experiment_cols + additional_imputation_cols + dose_cols + [response_col]
+    )
     ensure_all_cols_in_df(df_og, cols=required_cols)
 
     row_id_col = "__xynergy_pre_impute_row_id"
@@ -499,9 +519,7 @@ def pre_impute(
                 )
             )
         else:
-            df = df.with_columns(
-                _target_reference=pl.max_horizontal(single_resp_cols)
-            )
+            df = df.with_columns(_target_reference=pl.max_horizontal(single_resp_cols))
         target_col = "_combo_effect_target"
         df = df.with_columns(
             (pl.col(response_col) - pl.col("_target_reference")).alias(target_col)
@@ -571,9 +589,12 @@ def pre_impute(
                 for k in range(n_rows):
                     i, j = idx_a[da_list[k]], idx_b[db_list[k]]
                     sa, sb = sa_list[k], sb_list[k]
-                    if (sa is not None and sb is not None
-                            and not (isinstance(sa, float) and np.isnan(sa))
-                            and not (isinstance(sb, float) and np.isnan(sb))):
+                    if (
+                        sa is not None
+                        and sb is not None
+                        and not (isinstance(sa, float) and np.isnan(sa))
+                        and not (isinstance(sb, float) and np.isnan(sb))
+                    ):
                         warm[i, j] = sa + sb - sa * sb / 100
             else:
                 warm = None
@@ -582,7 +603,8 @@ def pre_impute(
             # rank 3 for direct response (full surface needs more flexibility).
             default_rank = 1 if target == "combo_effect" else 3
             completed = _iterative_svd_complete(
-                target_mat, mask,
+                target_mat,
+                mask,
                 rank=min(default_rank, min(n_a, n_b) - 1),
                 warm_start=warm,
             )
@@ -598,17 +620,15 @@ def pre_impute(
                     pl.Series("combo_effect_imputed", imputed_vals)
                 )
                 data = data.with_columns(
-                    (pl.col("_target_reference") + pl.col("combo_effect_imputed")).alias(
-                        "response_imputed_from_effect"
-                    )
+                    (
+                        pl.col("_target_reference") + pl.col("combo_effect_imputed")
+                    ).alias("response_imputed_from_effect")
                 )
                 data = data.with_columns(
                     pl.col("response_imputed_from_effect").alias("resp_imputed")
                 )
             else:
-                data = data.with_columns(
-                    pl.Series("resp_imputed", imputed_vals)
-                )
+                data = data.with_columns(pl.Series("resp_imputed", imputed_vals))
 
             imputed_list.append(data)
         imputed = pl.concat(imputed_list)
@@ -650,9 +670,9 @@ def pre_impute(
                     pl.Series(imputed_df[target_col]).alias("combo_effect_imputed")
                 )
                 data = data.with_columns(
-                    (pl.col("_target_reference") + pl.col("combo_effect_imputed")).alias(
-                        "response_imputed_from_effect"
-                    )
+                    (
+                        pl.col("_target_reference") + pl.col("combo_effect_imputed")
+                    ).alias("response_imputed_from_effect")
                 )
                 data = data.with_columns(
                     pl.col("response_imputed_from_effect").alias("resp_imputed")
