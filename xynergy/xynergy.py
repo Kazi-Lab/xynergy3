@@ -183,7 +183,12 @@ def xynergy(
         log=log,
     )
 
-    imputed = post_impute(df=factored, experiment_cols=experiment_cols, post_impute_tuning=post_impute_tuning, log=log)
+    imputed = post_impute(
+        df=factored,
+        experiment_cols=experiment_cols,
+        post_impute_tuning=post_impute_tuning,
+        log=log,
+    )
 
     with_synergy = add_synergy(
         imputed, experiment_cols=experiment_cols, method=synergy_method, log=log
