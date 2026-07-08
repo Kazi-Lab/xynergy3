@@ -1,5 +1,5 @@
 from .synergy import add_synergy
-from .tidy import tidy
+from .tidy import tidy, renamed_experiment_cols
 from .impute import pre_impute, post_impute
 from .factor import matrix_factorize
 from .util import make_list_if_str_or_none
@@ -155,9 +155,13 @@ def xynergy(
         log=log,
     )
 
-    # `tidy` always returns an `experiment_id` column. Avoid duplicate names if
-    # callers already supplied "experiment_id" in experiment_cols.
-    experiment_cols = [x for x in experiment_cols if x != "experiment_id"] + [
+    # In the case that experiment_cols take up reserved names, `tidy` will
+    # prepend them with a period. To inform downstream functions of this change,
+    # we call renamed_experiment_cols to get their (possibly) new names.
+    #
+    # Also, tidy produces an `experiment_id` col that is part of the
+    # experiment_cols family now
+    experiment_cols = [renamed_experiment_cols(response_col, experiment_cols)] + [
         "experiment_id"
     ]
 

@@ -191,3 +191,17 @@ def _enforce_no_reserved_names_used(
         df = df.rename(rename_dict)
         experiment_cols = [rename_dict.get(x, x) for x in experiment_cols]
     return df, experiment_cols
+
+
+# Experimental cols may or may not be renamed. This returns the possibly updated names.
+def renamed_experiment_cols(response_col, experiment_cols):
+    reserved_names = {"dose_a", "dose_b", "reponse", "experiment_id"}
+    if len(response_col) > 1:
+        reserved_names.add("replicate")
+
+    reserved_names_used = reserved_names.intersection(experiment_cols)
+    if len(reserved_names_used) != 0:
+        new_names = ["." + x for x in reserved_names_used]
+        rename_dict = dict(zip(reserved_names_used, new_names))
+        experiment_cols = [rename_dict.get(x, x) for x in experiment_cols]
+    return experiment_cols
