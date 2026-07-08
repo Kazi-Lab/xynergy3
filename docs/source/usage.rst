@@ -31,78 +31,212 @@ calculating synergy as normal.
  Example data overview
 ***********************
 
-Xynergy bundles a small real workbook example at
-`xynergy/example_data/data.xlsx`. The helper below reads that workbook,
-renames the columns to Xynergy's canonical names, and converts the
-worksheet's viability-style percentages into inhibition-style response
-percentages.
+Suppose we have some data that look like this:
 
-.. code:: python
+.. code::
 
-   from xynergy.example import load_example_data
+   >>> example_data
+   shape: (32, 8)
+   ┌───────┬─────────────┬───────────────┬────────┬────────┬───────┬───────┬───────┐
+   │ line  ┆ name_a      ┆ name_b        ┆ drug_a ┆ drug_b ┆ 1     ┆ 2     ┆ 3     │
+   │ ---   ┆ ---         ┆ ---           ┆ ---    ┆ ---    ┆ ---   ┆ ---   ┆ ---   │
+   │ str   ┆ str         ┆ str           ┆ f64    ┆ f64    ┆ f64   ┆ f64   ┆ f64   │
+   ╞═══════╪═════════════╪═══════════════╪════════╪════════╪═══════╪═══════╪═══════╡
+   │ SW780 ┆ AZD4547     ┆ rosiglitazone ┆ 0.0    ┆ 0.0    ┆ 0.0   ┆ 0.0   ┆ 0.0   │
+   │ SW780 ┆ AZD4547     ┆ rosiglitazone ┆ 0.0    ┆ 0.01   ┆ 0.1   ┆ 0.09  ┆ 0.1   │
+   │ SW780 ┆ AZD4547     ┆ rosiglitazone ┆ 0.0    ┆ 0.18   ┆ 1.87  ┆ 1.87  ┆ 1.99  │
+   │ SW780 ┆ AZD4547     ┆ rosiglitazone ┆ 0.0    ┆ 3.16   ┆ 25.28 ┆ 21.95 ┆ 22.75 │
+   │ SW780 ┆ AZD4547     ┆ rosiglitazone ┆ 0.0    ┆ 56.23  ┆ 84.1  ┆ 84.36 ┆ 84.04 │
+   │ …     ┆ …           ┆ …             ┆ …      ┆ …      ┆ …     ┆ …     ┆ …     │
+   │ SW780 ┆ saracatinib ┆ sunitinib     ┆ 3.16   ┆ 3.16   ┆ 41.94 ┆ 38.79 ┆ 41.4  │
+   │ SW780 ┆ saracatinib ┆ sunitinib     ┆ 56.23  ┆ 0.0    ┆ 84.8  ┆ 87.47 ┆ 85.31 │
+   │ SW780 ┆ saracatinib ┆ sunitinib     ┆ 56.23  ┆ 56.23  ┆ 98.02 ┆ 98.1  ┆ 98.15 │
+   │ SW780 ┆ saracatinib ┆ sunitinib     ┆ 1000.0 ┆ 0.0    ┆ 98.77 ┆ 99.0  ┆ 98.94 │
+   │ SW780 ┆ saracatinib ┆ sunitinib     ┆ 1000.0 ┆ 1000.0 ┆ 99.99 ┆ 99.99 ┆ 99.99 │
+   └───────┴─────────────┴───────────────┴────────┴────────┴───────┴───────┴───────┘
 
-   example_data = load_example_data()
+These are (fictional) dose-response data from a couple different drug
+pairs. Notably, they don't form a complete matrix of dose-pair-responses
+- the only experiments done are:
 
-`example_data` contains a single drug pair measured at six dose levels.
-Only the off-axis single-agent doses plus the dose-matched diagonal are
-observed, so the data still have the sparse "minimum combination data"
-shape shown in the left figure above.
+#. One drug varies while the other is 0
+#. drug concentration A = drug concentration B
 
-The bundled workbook has:
+More simply, they look like the left image in the figure above, not the
+middle image.
 
-- One experiment
-- One drug pair: Venetoclax + Volasertib
-- Six dose levels on each axis
-- Sixteen observed combinations, which expand to a 6 x 6 matrix after tidying
+Some other things to note:
 
-The code snippets below now use this bundled workbook example. Some
-printed output tables later in the page are illustrative summaries from
-older runs and may not match the workbook values exactly.
+-  We have two experiments - one involves drugs named 'AZD4547' and
+   'rosiglitazone', the other involved drugs named 'saracatinib' and
+   'sunitinib'.
 
-If you want to work with the raw workbook columns instead, use
-`load_example_data(raw=True)`.
+-  Each of these experiments have three replicates each
+
+Neither of these are required for Xynergy to work, but Xynergy is fully
+capable of handling both these situations. It's entirely possible - and
+probably more likely - to use Xynergy with just a single experiment with
+only one replicate. Your workflow may just be slightly simpler than the
+one we're about to dive in to
 
 **************
  Tidying data
 **************
 
-The workbook example already has one response per row, so `tidy` mainly
-does three things for us here:
+Data come in all forms, but Xynergy prefers each row to have a single
+dose pair of a single response. Looking at our data above, we have a bit
+of a problem: there are multiple responses for a single dose-pair, due
+to our replicates
 
-- Checks the input columns
-- Creates `experiment_id`
-- Expands the sparse axis-plus-diagonal observations into the full matrix,
-  filling missing combinations with `null`
+Our first function, `tidy`, makes this trivial to resolve. It also does
+a couple other things:
 
-Because `load_example_data()` already returns the preferred column names
-`dose_a`, `dose_b`, and `response`, we only need to specify the columns
-that identify an experiment:
+-  Checks on your data to catch errors early and quickly
+-  Define 'experiments'
+
+.. TIP::
+
+   The concept of an 'experiment' isn't complex, but it is important. If
+   you tell Xynergy that a group of rows come from the same experiment
+   (how this is done is described below), rows within that group that
+   have the same dose-pair concentrations will be considered replicates
+   of one another.
+
+   One instance where the notion of experiment can lead to unexpected
+   results is if you attempt to combine two matrices with different
+   concentration patterns, which will cause the experiment to expand to
+   fit every unique dose combination
+
+   .. figure:: ./_static/unexpected_addition.png
+
+      An unexpected combination
+
+Enough talking, let's do it:
 
 .. code:: python
 
-   from xynergy.tidy import tidy
+   from xynergy2.tidy import tidy
 
    clean_data = tidy(
        example_data,
-       experiment_cols=[
-           "experiment_source_id",
-           "line",
-           "drug_a",
-           "drug_b",
-           "pair_index",
-       ],
+       dose_cols=["drug_a", "drug_b"],
+       response_col=["1", "2", "3"],
+       experiment_cols=["line", "name_a", "name_b"],
    )
 
-For the bundled workbook, `tidy` expands 16 observed rows to 36 matrix
-rows, adding 20 `null` placeholders for the unmeasured interior
-combinations.
+   clean_data
 
-If you do not care about preserving the metadata columns, the bundled
-example also works as a single-experiment dataset:
+.. code::
+
+   ┌───────┬─────────────┬───────────────┬───────────────┬────────┬────────┬───────────┬──────────┐
+   │ line  ┆ name_a      ┆ name_b        ┆ experiment_id ┆ dose_a ┆ dose_b ┆ replicate ┆ response │
+   │ ---   ┆ ---         ┆ ---           ┆ ---           ┆ ---    ┆ ---    ┆ ---       ┆ ---      │
+   │ str   ┆ str         ┆ str           ┆ u32           ┆ f64    ┆ f64    ┆ str       ┆ f64      │
+   ╞═══════╪═════════════╪═══════════════╪═══════════════╪════════╪════════╪═══════════╪══════════╡
+   │ SW780 ┆ AZD4547     ┆ rosiglitazone ┆ 1             ┆ 0.0    ┆ 0.0    ┆ 1         ┆ 0.0      │
+   │ SW780 ┆ AZD4547     ┆ rosiglitazone ┆ 1             ┆ 0.0    ┆ 0.0    ┆ 2         ┆ 0.0      │
+   │ SW780 ┆ AZD4547     ┆ rosiglitazone ┆ 1             ┆ 0.0    ┆ 0.0    ┆ 3         ┆ 0.0      │
+   │ SW780 ┆ AZD4547     ┆ rosiglitazone ┆ 1             ┆ 0.0    ┆ 0.01   ┆ 2         ┆ 0.09     │
+   │ SW780 ┆ AZD4547     ┆ rosiglitazone ┆ 1             ┆ 0.0    ┆ 0.01   ┆ 3         ┆ 0.1      │
+   │ …     ┆ …           ┆ …             ┆ …             ┆ …      ┆ …      ┆ …         ┆ …        │
+   │ SW780 ┆ saracatinib ┆ sunitinib     ┆ 2             ┆ 1000.0 ┆ 3.16   ┆ null      ┆ null     │
+   │ SW780 ┆ saracatinib ┆ sunitinib     ┆ 2             ┆ 1000.0 ┆ 56.23  ┆ null      ┆ null     │
+   │ SW780 ┆ saracatinib ┆ sunitinib     ┆ 2             ┆ 1000.0 ┆ 1000.0 ┆ 3         ┆ 99.99    │
+   │ SW780 ┆ saracatinib ┆ sunitinib     ┆ 2             ┆ 1000.0 ┆ 1000.0 ┆ 2         ┆ 99.99    │
+   │ SW780 ┆ saracatinib ┆ sunitinib     ┆ 2             ┆ 1000.0 ┆ 1000.0 ┆ 1         ┆ 99.99    │
+   └───────┴─────────────┴───────────────┴───────────────┴────────┴────────┴───────────┴──────────┘
+
+Lots of things for us to notice here, so let's go over them before we
+move on to the finer details of using `tidy`.
+
+First, you might note some `null` responses. If you think about it like
+the figures shown above, these are the gray boxes that did not have a
+supplied value. `tidy` detected this dose combination would be present
+in a full dataset but noticed it was missing from the provided dataset,
+and added a placeholder row.
+
+The replicate column was added because we provided multiple columns to
+`response_col`. As you might be able to reason, `replicate` is `null`
+for our 'placeholder' rows since it isn't associated with any particular
+experimental run. Note also that we only produce a *single* placeholder
+replicate for each missing dose combination, *not* as many replicates as
+were performed in the original experiments (here 3).
+
+We specified which columns were needed to define a given experimental
+condition, and `tidy` produced a column `experiment_id`. This number
+uniquely identifies a given experiment in this dataset. Usually (such as
+in this example) things like drug names will be used to denote one
+experiment from another, but any sort of experimental metadata can be
+taken along for the ride - for instance, even though cell line (`line`)
+doesn't vary across conditions, it still might be useful to keep it.
+
+If you don't want or need to keep the cell line data, omitting a column
+silently drops it:
 
 .. code:: python
 
-   tidy(example_data)
+   tidy(
+       example_data,
+       dose_cols=["drug_a", "drug_b"],
+       response_col=["1", "2", "3"],
+       experiment_cols=["name_a", "name_b"],
+   )
+
+.. code::
+
+   ┌─────────────┬───────────────┬───────────────┬────────┬────────┬───────────┬──────────┐
+   │ name_a      ┆ name_b        ┆ experiment_id ┆ dose_a ┆ dose_b ┆ replicate ┆ response │
+   │ ---         ┆ ---           ┆ ---           ┆ ---    ┆ ---    ┆ ---       ┆ ---      │
+   │ str         ┆ str           ┆ u32           ┆ f64    ┆ f64    ┆ str       ┆ f64      │
+   ╞═════════════╪═══════════════╪═══════════════╪════════╪════════╪═══════════╪══════════╡
+   │ AZD4547     ┆ rosiglitazone ┆ 1             ┆ 0.0    ┆ 0.0    ┆ 1         ┆ 0.0      │
+   │ AZD4547     ┆ rosiglitazone ┆ 1             ┆ 0.0    ┆ 0.0    ┆ 2         ┆ 0.0      │
+   │ AZD4547     ┆ rosiglitazone ┆ 1             ┆ 0.0    ┆ 0.0    ┆ 3         ┆ 0.0      │
+   │ AZD4547     ┆ rosiglitazone ┆ 1             ┆ 0.0    ┆ 0.01   ┆ 2         ┆ 0.09     │
+   │ AZD4547     ┆ rosiglitazone ┆ 1             ┆ 0.0    ┆ 0.01   ┆ 3         ┆ 0.1      │
+   │ …           ┆ …             ┆ …             ┆ …      ┆ …      ┆ …         ┆ …        │
+   │ saracatinib ┆ sunitinib     ┆ 2             ┆ 1000.0 ┆ 3.16   ┆ null      ┆ null     │
+   │ saracatinib ┆ sunitinib     ┆ 2             ┆ 1000.0 ┆ 56.23  ┆ null      ┆ null     │
+   │ saracatinib ┆ sunitinib     ┆ 2             ┆ 1000.0 ┆ 1000.0 ┆ 3         ┆ 99.99    │
+   │ saracatinib ┆ sunitinib     ┆ 2             ┆ 1000.0 ┆ 1000.0 ┆ 2         ┆ 99.99    │
+   │ saracatinib ┆ sunitinib     ┆ 2             ┆ 1000.0 ┆ 1000.0 ┆ 1         ┆ 99.99    │
+   └─────────────┴───────────────┴───────────────┴────────┴────────┴───────────┴──────────┘
+
+It's also entirely possible you only have one experiment in your
+dataset. In that case, `experiment_cols = None` (the default) assumes
+the entire dataset is a single experiment
+
+.. code:: python
+
+   tidy(
+       example_data,
+       dose_cols=["drug_a", "drug_b"],
+       response_col=["1", "2", "3"],
+   )
+
+.. code::
+
+   ┌───────────────┬────────┬────────┬───────────┬──────────┐
+   │ experiment_id ┆ dose_a ┆ dose_b ┆ replicate ┆ response │
+   │ ---           ┆ ---    ┆ ---    ┆ ---       ┆ ---      │
+   │ i32           ┆ f64    ┆ f64    ┆ str       ┆ f64      │
+   ╞═══════════════╪════════╪════════╪═══════════╪══════════╡
+   │ 1             ┆ 0.0    ┆ 0.0    ┆ 1         ┆ 0.0      │
+   │ 1             ┆ 0.0    ┆ 0.0    ┆ 2         ┆ 0.0      │
+   │ 1             ┆ 0.0    ┆ 0.0    ┆ 2         ┆ 0.0      │
+   │ 1             ┆ 0.0    ┆ 0.0    ┆ 3         ┆ 0.0      │
+   │ 1             ┆ 0.0    ┆ 0.0    ┆ 3         ┆ 0.0      │
+   │ …             ┆ …      ┆ …      ┆ …         ┆ …        │
+   │ 1             ┆ 1000.0 ┆ 1000.0 ┆ 2         ┆ 99.99    │
+   │ 1             ┆ 1000.0 ┆ 1000.0 ┆ 2         ┆ 99.99    │
+   │ 1             ┆ 1000.0 ┆ 1000.0 ┆ 1         ┆ 99.99    │
+   │ 1             ┆ 1000.0 ┆ 1000.0 ┆ 1         ┆ 99.99    │
+   │ 1             ┆ 1000.0 ┆ 1000.0 ┆ 3         ┆ 99.99    │
+   └───────────────┴────────┴────────┴───────────┴──────────┘
+
+(This would be particularly odd for this dataset, since it implies you
+are keeping replicates both in a columnwise AND rowwise fashion - but
+stranger things have happened and this won't effect downstream analysis)
 
 Tidying is just the first step, though. Our next step is to pre-impute
 the missing values.
