@@ -27,7 +27,7 @@ def _lnmf(x, R, max_iter=500, n_trials=200, top_n=10):
         predicted_matrix, _ = _fit(x, R, max_iter, params)
         out = pl.DataFrame(predicted_matrix).unpivot().drop("variable")
         out.columns = [str(i)]
-        best_param_fits = pl.concat([best_param_fits, out], how="horizontal")
+        best_param_fits = pl.concat([best_param_fits, out], how="horizontal_extend")
 
     modes = best_param_fits.transpose().select(pl.all().map_batches(venter)).transpose()
     return modes.to_numpy().reshape(x.shape).transpose()

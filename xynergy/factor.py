@@ -273,7 +273,7 @@ def _factor_by_group(
             approx = fn(mat)
 
         approx_col = _from_mat(approx, f"{response_col}_{method_name}")
-        experiment = pl.concat([experiment, approx_col], how="horizontal")
+        experiment = pl.concat([experiment, approx_col], how="horizontal_extend")
         experiment = experiment.drop(response_col)
         factored.append(experiment)
     all = pl.concat(factored)
@@ -285,7 +285,9 @@ def _factor_by_group(
     return x
 
 
-def _collapse_factorization_runs(final: pl.DataFrame, shape: tuple[int, int]) -> np.ndarray:
+def _collapse_factorization_runs(
+    final: pl.DataFrame, shape: tuple[int, int]
+) -> np.ndarray:
     """Collapse repeated factorization runs to a single matrix via Venter mode.
 
     This avoids relying on newer Polars `map_batches(..., returns_scalar=True)`
@@ -336,7 +338,7 @@ def _nmf(x):
         h = model.components_
         out = pl.DataFrame(w @ h).unpivot().drop("variable")
         out.columns = [str(i)]
-        final = pl.concat([final, out], how="horizontal")
+        final = pl.concat([final, out], how="horizontal_extend")
     return _collapse_factorization_runs(final, x.shape)
 
 
@@ -355,7 +357,7 @@ def _svd(x):
         approx = u @ s @ vt
         out = pl.DataFrame(approx).unpivot().drop("variable")
         out.columns = [str(i)]
-        final = pl.concat([final, out], how="horizontal")
+        final = pl.concat([final, out], how="horizontal_extend")
 
     return _collapse_factorization_runs(final, x.shape)
 
@@ -428,6 +430,6 @@ def _pmf(x):
         approximation = pl.DataFrame(np.dot(row_features, col_features.T))
         out = approximation.unpivot().drop("variable")
         out.columns = [str(i)]
-        final = pl.concat([final, out], how="horizontal")
+        final = pl.concat([final, out], how="horizontal_extend")
 
     return _collapse_factorization_runs(final, x.shape)

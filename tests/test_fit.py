@@ -109,7 +109,7 @@ class TestAddSingleDrugResponses:
             .join(pl.DataFrame({"dose_b_resp": inhibitions}), how="cross")
             .rename({"dose_b_resp": "dose_a_resp_right"})
         )
-        truth = pl.concat([bliss_indep, responses], how="horizontal")
+        truth = pl.concat([bliss_indep, responses], how="horizontal_extend")
         both = out.join(truth, on=["dose_a", "dose_b", "experiment_id", "response"])
         diffs = both.select(
             c.dose_a_resp - c.dose_a_resp_right, c.dose_b_resp - c.dose_b_resp_right
@@ -120,8 +120,8 @@ class TestAddSingleDrugResponses:
     def test_fit_false_returns_observed_responses(self):
         mdf = (
             pl.DataFrame({"drug_a": [[1, 2, 3]], "drug_b": [[1, 2, 3]]})
-            .explode("drug_a")
-            .explode("drug_b")
+            .explode("drug_a", empty_as_null=True)
+            .explode("drug_b", empty_as_null=True)
             .with_columns(response=np.array(range(1, 10)))
         )
 

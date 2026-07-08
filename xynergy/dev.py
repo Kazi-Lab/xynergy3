@@ -26,12 +26,12 @@ def rm_off_axis(
     )
     if len(mismatched_doses) > 0:
         raise ValueError("Number of unique doses in both drugs must be the same")
-    diags = doses.explode(dose_cols)
+    diags = doses.explode(dose_cols, empty_as_null=True)
     min_doses = (
         doses.with_columns(
             pl.col(dose_cols).list.first().name.suffix("_min"),
         )
-        .explode(dose_cols)
+        .explode(dose_cols, empty_as_null=True)
         .with_columns(
             pl.struct(pl.col(dose_cols[0], dose_cols[1] + "_min")).alias("dosepair1"),
             pl.struct(pl.col(dose_cols[0] + "_min", dose_cols[1])).alias("dosepair2"),

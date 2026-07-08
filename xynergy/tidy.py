@@ -122,8 +122,8 @@ def tidy(
     all_dose_combos = (
         df.group_by(experiment_cols)
         .agg(pl.col("dose_a").unique(), pl.col("dose_b").unique())
-        .explode("dose_a")
-        .explode("dose_b")
+        .explode("dose_a", empty_as_null=True)
+        .explode("dose_b", empty_as_null=True)
     )
     df = all_dose_combos.join(df, on=["dose_a", "dose_b"] + experiment_cols, how="left")
 
