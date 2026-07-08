@@ -161,7 +161,8 @@ def xynergy(
     #
     # Also, tidy produces an `experiment_id` col that is part of the
     # experiment_cols family now
-    experiment_cols = [renamed_experiment_cols(response_col, experiment_cols)] + [
+
+    experiment_cols = renamed_experiment_cols(response_col, experiment_cols) + [
         "experiment_id"
     ]
 
