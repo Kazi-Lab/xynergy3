@@ -1,4 +1,4 @@
-from xynergy import tidy
+from xynergy.tidy import tidy
 import pytest
 import polars as pl
 
