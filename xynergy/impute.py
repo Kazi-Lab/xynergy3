@@ -35,8 +35,8 @@ def _iterative_svd_complete(
     Parameters
     ----------
     observed : np.ndarray
-        Matrix with known values in observed positions (other positions are
-        ignored; set them to 0).
+        Matrix with known values in observed positions, denoted by mask (other positions are
+        ignored).
     mask : np.ndarray
         Binary array of the same shape: 1.0 for observed, 0.0 for missing.
     rank : int
