@@ -173,7 +173,7 @@ def _enforce_no_reserved_names_used(
     log: str,
 ):
     reserved_names = {"dose_a", "dose_b", "response", "experiment_id"}
-    # 'replicate' only needed to unpivot data, and may be used in
+    # 'replicate' is only needed to unpivot data, and may be used in
     # experiment_cols otherwise. So it is 'conditionally reserved'
     if len(response_col) > 1:
         reserved_names.add("replicate")
