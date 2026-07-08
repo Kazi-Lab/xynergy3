@@ -81,7 +81,7 @@ def tidy(
     """
     # Make str args of column names become lists
     response_col = make_list_if_str_or_none(response_col)
-    experiment_cols = list(make_list_if_str_or_none(experiment_cols))
+    experiment_cols = make_list_if_str_or_none(experiment_cols)
     dose_cols = make_list_if_str_or_none(dose_cols)
 
     if len(dose_cols) != 2:
