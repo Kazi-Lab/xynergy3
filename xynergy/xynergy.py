@@ -52,7 +52,7 @@ def xynergy(
         Is the response reported as (for instance) survival, where a complete
         response would be 0? Or is it something like (again, for instance)
         killing, where a complete response would be 1 (in the case of
-        `response_is_percent = False`) or 100 (in the case of `reponse_is_percent =
+        `response_is_percent = False`) or 100 (in the case of `response_is_percent =
         True`)
 
     pre_impute_method: string, default "RBFSurface"

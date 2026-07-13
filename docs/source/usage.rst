@@ -537,7 +537,7 @@ and actual responses vary by using a built-in plotting helper function
            color_max=20,
        ).save(f"{i[0]}_vs-og.png", ppi=800)
 
-`plot_reponse_landscape` plots the dose-response matrix, with doses as
+`plot_response_landscape` plots the dose-response matrix, with doses as
 the axis and response as the color. If a `reference_col` argument is
 supplied, that column is subtracted from the `response_col`. So in this
 case, we're plotting how far off our predicted values were from the

@@ -149,7 +149,7 @@ def _bliss(df: pl.DataFrame, uncombined_resp_cols):
     `add_uncombined_drug_responses` for more information)
 
     :return: A polars.DataFrame with a `bliss_ref` column containing the expected
-    reponse under Bliss assumptions.
+    response under Bliss assumptions.
     """
     a = uncombined_resp_cols[0]
     b = uncombined_resp_cols[1]
@@ -181,7 +181,7 @@ def _hsa(df: pl.DataFrame, uncombined_resp_cols):
     `add_uncombined_drug_responses` for more information)
 
     :return: A polars.DataFrame with a `hsa_ref` column containing the expected
-    reponse under Highest Single Agent assumptions.
+    response under Highest Single Agent assumptions.
     """
     df = df.with_columns(hsa_ref=pl.max_horizontal(uncombined_resp_cols))
     return df
@@ -200,7 +200,7 @@ def _zip(df: pl.DataFrame, uncombined_resp_cols):
     `add_uncombined_drug_responses` for more information)
 
     :return: A polars.DataFrame with a `zip_ref` column containing the expected
-    reponse under ZIP assumptions.
+    response under ZIP assumptions.
     """
     a = uncombined_resp_cols[0]
     b = uncombined_resp_cols[1]
@@ -236,7 +236,7 @@ def _loewe(
     `fit_individual_drugs`
 
     :return: A polars.DataFrame with a `loewe_ref` column containing the expected
-    reponse under Loewe additivity assumptions.
+    response under Loewe additivity assumptions.
     """
 
     df = _add_a_and_b_in_a_terms(

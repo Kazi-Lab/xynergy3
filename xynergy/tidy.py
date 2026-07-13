@@ -48,7 +48,7 @@ def tidy(
         Is the response reported as (for instance) survival, where a complete
         response would be 0? Or is it something like (again, for instance)
         killing, where a complete response would be 1 (in the case of
-        `response_is_percent = False`) or 100 (in the case of `reponse_is_percent =
+        `response_is_percent = False`) or 100 (in the case of `response_is_percent =
         True`)
 
     log: string, default "all"
@@ -195,7 +195,7 @@ def _enforce_no_reserved_names_used(
 
 # Experimental cols may or may not be renamed. This returns the possibly updated names.
 def renamed_experiment_cols(response_col, experiment_cols):
-    reserved_names = {"dose_a", "dose_b", "reponse", "experiment_id"}
+    reserved_names = {"dose_a", "dose_b", "response", "experiment_id"}
     if len(response_col) > 1:
         reserved_names.add("replicate")
 
